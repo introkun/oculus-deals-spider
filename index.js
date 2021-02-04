@@ -5,4 +5,13 @@ import scraperController from './pageController.js'
 let browserInstance = browser.startBrowser()
 
 // Pass the browser instance to the scraper controller
-scraperController(browserInstance)
+const items = await scraperController(browserInstance)
+
+console.log("scraped items")
+items.forEach(item => {
+    console.log(`item: ${item.name}`)
+    console.log(`\tprice ${item.priceCurrency}${item.price}`)
+    console.log(`\tsale price ${item.salePriceCurrency}${item.salePrice}`)
+    console.log(`\tdiscount ${item.discountPercent}%`)
+    console.log(`\tends ${item.endsUtc}`)
+})

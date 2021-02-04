@@ -12,8 +12,8 @@ const scraperObject = {
 
         const items = await page.$$eval('div.store__section', items => {
             const parsePrice = str => {
-                const priceArray = str.split("$"),
-                    priceCurrency = priceArray[0] + "$", priceValue = +priceArray[1]
+                const priceArray = /^(.*)\$(.*)/g.exec(str),
+                    priceCurrency = `${priceArray[1]}$`, priceValue = +priceArray[2]
                 console.log(`priceArray ${priceArray}`)
                 console.log(`priceCurrency ${priceCurrency}`)
                 console.log(`priceValue ${priceValue}`)
@@ -31,19 +31,22 @@ const scraperObject = {
             items = items.map(el => {
                 let obj = {}
                 obj['name'] = el.querySelector('.store-section-item__meta-name').innerText
-                obj['discount'] = el.querySelector('.store-section-item-tag').innerText
+
+                const dicsountString = el.querySelector('.store-section-item-tag').innerText
+                const discountValue = /^-(.*)%$/g.exec(dicsountString)[1]
+                obj['discountPercent'] = +discountValue
 
                 const salePrice = el.querySelector('.store-section-item-price-label__sale-price > span').innerText
                 const salePriceObj = parsePrice(salePrice)
                 console.log(`salePriceObj ${salePriceObj}`)
-                obj['sale-price'] = salePriceObj.value
-                obj['sale-price-currency'] = salePriceObj.currency
+                obj['salePrice'] = salePriceObj.value
+                obj['salePriceCurrency'] = salePriceObj.currency
 
                 const price = el.querySelector('.store-section-item-price-label__strikethrough-price > span').innerText
                 const priceObj = parsePrice(price)
                 console.log(`priceObj ${priceObj}`)
                 obj['price'] = priceObj.value
-                obj['price-currency'] = priceObj.currency
+                obj['priceCurrency'] = priceObj.currency
 
                 const now = Date.now()
                 const timer = el.querySelector('.store-item-countdown-timer__timer').innerText
@@ -54,14 +57,15 @@ const scraperObject = {
                 console.log(`endsInMs ${endsInMs}`)
                 const endsUtcDate = new Date(now + endsInMs)
                 console.log(`endsUtcDate ${endsUtcDate}`)
-                obj['ends-utc'] = endsUtcDate.toUTCString()
+                obj['endsUtc'] = endsUtcDate.toUTCString()
 
                 return obj
             })
 
             return items
         })
-        console.log(items)
+
+        return items
     }
 }
 
