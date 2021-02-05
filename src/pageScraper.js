@@ -57,7 +57,7 @@ const scraperObject = {
                 console.log(`endsInMs ${endsInMs}`)
                 const endsUtcDate = new Date(now + endsInMs)
                 console.log(`endsUtcDate ${endsUtcDate}`)
-                obj['endsUtc'] = endsUtcDate.toUTCString()
+                obj['endsUtc'] = endsUtcDate.toISOString()
 
                 return obj
             })

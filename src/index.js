@@ -17,7 +17,10 @@ items.forEach(item => {
     console.log(`\tends ${item.endsUtc}`)
 })
 
-let db = new Datastore({filename: './oculus_discounts.db', autoload: true, timestampData: true})
+const now = new Date().toISOString()
+items.map(el => el['createdAt'] = now)
+
+let db = new Datastore({filename: './oculus_discounts.db', autoload: true})
 db.insert(items, function (err, newDocs) {
     if (err) {
         console.log(`Error inserting into DB: ${err}`)
