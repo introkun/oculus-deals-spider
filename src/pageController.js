@@ -9,7 +9,7 @@ async function scrapeAll(browserInstance){
         return items
     }
     catch(err){
-        console.log("Could not resolve the browser instance => ", err)
+        console.log("Could not scrape data => ", err)
     }
 }
 
