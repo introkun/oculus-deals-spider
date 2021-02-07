@@ -146,6 +146,7 @@ const scraperObject = {
 
             return game
         })
+        game['url'] = link
         items.push(game)
 
         return items

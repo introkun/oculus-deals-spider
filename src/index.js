@@ -15,6 +15,8 @@ items.forEach(item => {
     console.log(`\tsale price ${item.salePriceCurrency}${item.salePrice}`)
     console.log(`\tdiscount ${item.discountPercent}%`)
     console.log(`\tends ${item.endsUtc}`)
+    if (item.url)
+        console.log(`\turl ${item.url}`)
 })
 
 const now = new Date().toISOString()
