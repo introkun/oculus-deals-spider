@@ -87,8 +87,10 @@ const scraperObject = {
             return link
         })
 
-        //if (!link)
-        //    return []
+        if (link == undefined || link.length == 0) {
+            console.log("Can't find game's link")
+            return []
+        }
 
         console.log(`Navigating to ${link}...`)
         await page.goto(link)
