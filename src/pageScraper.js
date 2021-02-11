@@ -1,3 +1,99 @@
+const scrapeSection = async (page, sectionIndex) => {
+    console.log('Wait for the required DOM to be rendered')
+    const sectionHtmlElementName = 'div.store__section'
+    await page.waitForSelector(sectionHtmlElementName)
+    console.log('Found needed element')
+
+    console.log(`Trying to find deals in section #${sectionIndex}`)
+    const sectionLink = await page.$$eval(sectionHtmlElementName, (items, index) => {
+        try {
+            console.log(`items ${items}`)
+            items = items[index]
+            console.log(`items ${items}`)
+            const titleElement = items.querySelector('a.store-section-header__title')
+            console.log(`titleElement ${titleElement}`)
+            const sectionTitle = titleElement ? titleElement.textContent : ''
+            const sectionLink = titleElement.href
+
+            console.log(`sectionTitle ${sectionTitle}`)
+            console.log(`sectionLink ${sectionLink}`)
+
+            return sectionLink
+        } catch (e) {
+            console.log(`Failed to scrape section: ${e}`)
+            return []
+        }
+    }, sectionIndex)
+
+    console.log(`Navigating to ${sectionLink}...`)
+    await page.goto(sectionLink)
+
+    console.log('Wait for the required DOM to be rendered')
+    await page.waitForSelector('div.section__items-cell')
+    console.log('Found needed element')
+
+    let items = page.$$eval('div.section__items-cell', items => {
+        const parsePrice = str => {
+            const priceArray = /^(.*)\$(.*)/g.exec(str),
+                priceCurrency = `${priceArray[1]}$`, priceValue = +priceArray[2]
+            console.log(`priceArray ${priceArray}`)
+            console.log(`priceCurrency ${priceCurrency}`)
+            console.log(`priceValue ${priceValue}`)
+            const obj = {}
+            obj['currency'] = priceCurrency
+            obj['value'] = priceValue
+            return obj
+        }
+
+        items = items.map(el => {
+            let obj = {}
+            obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText
+
+            const dicsountString = el.querySelector('span.store-section-item-tag').innerText
+            const discountValue = /^-(.*)%$/g.exec(dicsountString)[1]
+            obj['discountPercent'] = +discountValue
+
+            const salePrice = el.querySelector('span.store-section-item-price-label__sale-price > span').innerText
+            const salePriceObj = parsePrice(salePrice)
+            console.log(`salePriceObj ${salePriceObj}`)
+            obj['salePrice'] = salePriceObj.value
+            obj['salePriceCurrency'] = salePriceObj.currency
+
+            const price = el.querySelector('s.store-section-item-price-label__strikethrough-price > span').innerText
+            const priceObj = parsePrice(price)
+            console.log(`priceObj ${priceObj}`)
+            obj['price'] = priceObj.value
+            obj['priceCurrency'] = priceObj.currency
+
+            try {
+                const now = Date.now()
+                const timer = el.querySelector('span.store-item-countdown-timer__timer').innerText
+                console.log(`timer ${timer}`)
+                const timeSplitted = timer.split(":")
+                if (timeSplitted.length > 0) {
+                    const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
+                        Number(timeSplitted[2])) * 1000
+                    console.log(`endsInMs ${endsInMs}`)
+                    const endsUtcDate = new Date(now + endsInMs)
+                    console.log(`endsUtcDate ${endsUtcDate}`)
+                    obj['endsUtc'] = endsUtcDate.toISOString()
+                } else {
+                    // TODO: parse days
+                }
+            } catch (e) {
+                console.log(`failed to parse end date: ${e}`)
+            }
+
+            obj['url'] = el.querySelector('a.store-section-item-tile').href
+
+            return obj
+        })
+        return items
+    })
+
+    return items
+}
+
 const scraperObject = {
     url: 'https://www.oculus.com/experiences/quest/',
     async scraper(browser){
@@ -5,78 +101,14 @@ const scraperObject = {
         console.log(`Navigating to ${this.url}...`)
         await page.goto(this.url)
 
-        console.log('Wait for the required DOM to be rendered')
-        await page.waitForSelector('div.store__section')
-        console.log('Found needed element')
-
-        let items = await page.$$eval('div.store__section', items => {
-            const parsePrice = str => {
-                const priceArray = /^(.*)\$(.*)/g.exec(str),
-                    priceCurrency = `${priceArray[1]}$`, priceValue = +priceArray[2]
-                console.log(`priceArray ${priceArray}`)
-                console.log(`priceCurrency ${priceCurrency}`)
-                console.log(`priceValue ${priceValue}`)
-                const obj = {}
-                obj['currency'] = priceCurrency
-                obj['value'] = priceValue
-                return obj
-            }
-
-            console.log(`items ${items}`)
-
-            filtered_items = items.filter(item => {
-                const title = item.querySelector('div.store-section-header__title')
-                return title && title.textContent === "Quest Picks"
-            })
-
-            console.log(`filtered items ${items}`)
-
-            if (filtered_items.length == 0)
-                return []
-
-            items = filtered_items
-
-            items = [...items[0].querySelectorAll('.store-section-items .store-section-item__meta')]
-            items = items.map(el => {
-                let obj = {}
-                obj['name'] = el.querySelector('.store-section-item__meta-name').innerText
-
-                const dicsountString = el.querySelector('.store-section-item-tag').innerText
-                const discountValue = /^-(.*)%$/g.exec(dicsountString)[1]
-                obj['discountPercent'] = +discountValue
-
-                const salePrice = el.querySelector('.store-section-item-price-label__sale-price > span').innerText
-                const salePriceObj = parsePrice(salePrice)
-                console.log(`salePriceObj ${salePriceObj}`)
-                obj['salePrice'] = salePriceObj.value
-                obj['salePriceCurrency'] = salePriceObj.currency
-
-                const price = el.querySelector('.store-section-item-price-label__strikethrough-price > span').innerText
-                const priceObj = parsePrice(price)
-                console.log(`priceObj ${priceObj}`)
-                obj['price'] = priceObj.value
-                obj['priceCurrency'] = priceObj.currency
-
-                const now = Date.now()
-                const timer = el.querySelector('.store-item-countdown-timer__timer').innerText
-                console.log(`timer ${timer}`)
-                const timeSplitted = timer.split(":")
-                const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
-                    Number(timeSplitted[2])) * 1000
-                console.log(`endsInMs ${endsInMs}`)
-                const endsUtcDate = new Date(now + endsInMs)
-                console.log(`endsUtcDate ${endsUtcDate}`)
-                obj['endsUtc'] = endsUtcDate.toISOString()
-
-                return obj
-            })
-
-            return items
-        })
+        let items = await scrapeSection(page, 1)
 
         if (items.length != 0)
             return items
 
+        console.log("Not found deals in 'Quest Picks' section")
+
+        console.log("Trying to find deals in 'Quest Picks' section")
         console.log('Wait for the required DOM to be rendered')
         await page.waitForSelector('span.store-section-item-price-label__promo')
         console.log('Found needed element')
