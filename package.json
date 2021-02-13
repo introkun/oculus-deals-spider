@@ -12,6 +12,7 @@
   "author": "sergey g",
   "license": "MIT",
   "dependencies": {
+    "config": "^3.3.3",
     "nedb": "^1.8.0",
     "puppeteer": "^7.0.0"
   },
