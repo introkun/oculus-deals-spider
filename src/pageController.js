@@ -1,16 +1,26 @@
 import scraperObject from './pageScraper.js'
 
-async function scrapeAll(browserInstance){
-    let browser;
-    try{
-        browser = await browserInstance
-        const items = await scraperObject.scraper(browser)
-        await browser.close()
-        return items
+class ScraperController {
+    constructor() {
+
     }
-    catch(err){
-        console.log("Could not scrape data => ", err)
+
+    async scrapeAll(browserInstance) {
+        this.browser = null
+        try{
+            this.browser = await browserInstance
+            const items = await scraperObject.scraper(this.browser)
+            return items
+        }
+        catch(err){
+            console.log("Could not scrape data => ", err)
+        }
+    }
+
+    stopBrowser() {
+        if (this.browser)
+            this.browser.close()
     }
 }
 
-export default (browserInstance) => scrapeAll(browserInstance)
+export default ScraperController

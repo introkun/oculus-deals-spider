@@ -1,12 +1,21 @@
 import browser from './browser.js'
-import scraperController from './pageController.js'
+import ScraperController from './pageController.js'
 import Datastore from 'nedb'
 
+const isInDebugMode = () => {
+    return process.env.NODE_ENV && process.env.NODE_ENV === 'debug'
+}
+
 //Start the browser and create a browser instance
-let browserInstance = browser.startBrowser()
+const startBrowserHeadless = !isInDebugMode()
+let browserInstance = browser.startBrowser(startBrowserHeadless)
+const scraperController = new ScraperController()
 
 // Pass the browser instance to the scraper controller
-let items = await scraperController(browserInstance)
+let items = await scraperController.scrapeAll(browserInstance)
+
+if (!isInDebugMode())
+    scraperController.stopBrowser()
 
 if (!items || items.length == 0) {
     console.log('No items found')
@@ -23,19 +32,19 @@ items.map(el => el['createdAt'] = now.toISOString())
 
 let db = new Datastore({filename: './oculus_discounts.db', autoload: true})
 
-let last24hours = new Date()
-last24hours.setDate(now.getDate() - 1) // minus 1 day
+let lastWeek = new Date()
+lastWeek.setDate(now.getDate() - 7) // minus 7 days
 
-console.log(`last24hours: ${last24hours.toISOString()}`)
+console.log(`lastWeek: ${lastWeek.toISOString()}`)
 
 const gamesExpression = items.map(el => {
     return { name: el.name }
 })
 
-console.log(`Looking for existing games in the DB for the last 24 hours...`)
+console.log(`Looking for existing games in the DB for the last week...`)
 db.find({
     createdAt: {
-        $gte: last24hours.toISOString()
+        $gte: lastWeek.toISOString()
     },
     $or: gamesExpression
 }, (err, docs) => {
