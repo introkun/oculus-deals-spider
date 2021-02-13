@@ -1,6 +1,7 @@
 import browser from './browser.js'
 import ScraperController from './pageController.js'
 import Datastore from 'nedb'
+import config from 'config'
 
 const isInDebugMode = () => {
     return process.env.NODE_ENV && process.env.NODE_ENV === 'debug'
@@ -30,7 +31,8 @@ items.forEach(item => {
 const now = new Date()
 items.map(el => el['createdAt'] = now.toISOString())
 
-let db = new Datastore({filename: './oculus_discounts.db', autoload: true})
+const dbPath = config.get('DbPath')
+let db = new Datastore({filename: dbPath, autoload: true})
 
 let lastWeek = new Date()
 lastWeek.setDate(now.getDate() - 7) // minus 7 days
