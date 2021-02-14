@@ -1,4 +1,6 @@
-# oculus-deals-spider
-oculus-deals-spider
+# oculus-deals-spider ![Deploy](https://github.com/introkun/oculus-deals-spider/workflows/Deploy/badge.svg?branch=master)
 
-Ispired byt the article: https://www.digitalocean.com/community/tutorials/how-to-scrape-a-website-using-node-js-and-puppeteer-ru
+This is a web scraper which crawls the Oculus Store for Oculus Quest deals and saves to the lightweight DB ([nedb](https://github.com/louischatriot/nedb)).
+After the scraping [the oculus deals spider bot](https://github.com/introkun/oculus-deals-spider-bot) posts new deals from the DB to the Telegram channel [Oculus Quest Deals & News](https://t.me/oculusQuestDeals).
+
+Ispired by the article: https://www.digitalocean.com/community/tutorials/how-to-scrape-a-website-using-node-js-and-puppeteer-ru
