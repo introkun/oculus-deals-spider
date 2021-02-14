@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy app
+        uses: appleboy/ssh-action@v0.1.2
+        with:
+          host: ${{secrets.SSH_HOST}}
+          key: ${{secrets.SSH_KEY}}
+          username: ${{secrets.SSH_USERNAME}}
+          
+          script: |
+            appName=oculus-deals-spider
+            appDir=/opt/$appName
+            tempDir=$(mktemp -d /opt/oculus-deals-spider.XXXXXXXXX)
+            mkdir $tempDir
+            cd $tempDir
+            git clone git@github.com:introkun/oculus-deals-spider.git .
+
+            echo "Installing app dependencies"
+            npm ci
+
+            echo "Writing config wile"
+            echo "${{secrets.CONFIG}}" > config/production.json
+
+            echo "Renaming current app folder"
+            mv $appDir $appDir.$(date +\%Y\%m\%d\%H\%M\%S)
+            
+            echo "Renaming new app to current"
+            cd /opt
+            mv $tempDir $appDir
