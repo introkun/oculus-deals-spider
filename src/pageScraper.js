@@ -45,6 +45,10 @@ const scrapeSection = async (page, sectionIndex) => {
             return obj
         }
 
+        items = items.filter(el => {
+            return el.querySelector('span.store-section-item-tag')
+        })
+
         items = items.map(el => {
             let obj = {}
             obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText
@@ -106,7 +110,8 @@ const scraperObject = {
         if (items.length != 0)
             return items
 
-        console.log("Not found deals in 'Quest Picks' section")
+        console.log("Not found deals in 1st section")
+        await page.goBack()
 
         console.log("Trying to find deals in 'Quest Picks' section")
         console.log('Wait for the required DOM to be rendered')
