@@ -7,6 +7,14 @@ const isInDebugMode = () => {
   return process.env.NODE_ENV && process.env.NODE_ENV === 'debug';
 };
 
+const saveSections = (sections) => {
+  // TODO: save sections to the DB
+  console.log('Saving sections to the DB...');
+  sections.forEach((el) => {
+    console.log(`section ${el.title} ${el.link}`);
+  });
+};
+
 async function main() {
   // Start the browser and create a browser instance
   const startBrowserHeadless = !isInDebugMode();
@@ -14,24 +22,28 @@ async function main() {
   const scraperController = new ScraperController();
 
   // Pass the browser instance to the scraper controller
-  let items = await scraperController.scrapeAll(browserInstance);
+  const result = await scraperController.scrapeAll(browserInstance);
 
   if (!isInDebugMode()) {
     scraperController.stopBrowser();
   }
 
-  if (!items || items.length == 0) {
+  if (result && result.sections) {
+    saveSections(result.sections);
+  }
+
+  if (!result.items || result.items.length == 0) {
     console.log('No items found');
     process.exit(0);
   }
 
   console.log(`Scraped items:`);
-  items.forEach((item) => {
+  result.items.forEach((item) => {
     console.log(item);
   });
 
   const now = new Date();
-  items.map((el) => el['createdAt'] = now.toISOString());
+  result.items.map((el) => el['createdAt'] = now.toISOString());
 
   const dbPath = config.get('DbPath');
   const db = new Datastore({filename: dbPath, autoload: true});
@@ -41,7 +53,7 @@ async function main() {
 
   console.log(`lastWeek: ${lastWeek.toISOString()}`);
 
-  const gamesExpression = items.map((el) => {
+  const gamesExpression = result.items.map((el) => {
     return {name: el.name};
   });
 
@@ -63,17 +75,17 @@ async function main() {
     });
     console.log(`Found ${existingGames.size} existing deal(s)`);
 
-    items = items.filter((el) => {
+    result.items = result.items.filter((el) => {
       return !existingGames.has(el.name);
     });
 
-    if (items.length == 0) {
+    if (result.items.length == 0) {
       console.log('No items to insert to DB');
       return;
     }
 
-    console.log(`Non-duplicate items to insert into DB: ${items}`);
-    db.insert(items, function(err, newDocs) {
+    console.log(`Non-duplicate items to insert into DB: ${result.items}`);
+    db.insert(result.items, function(err, newDocs) {
       if (err) {
         console.log(`Error inserting into DB: ${err}`);
         return;

@@ -4,35 +4,49 @@ const scrapeSection = async (page, sectionIndex) => {
   await page.waitForSelector(sectionHtmlElementName);
   console.log('Found needed element');
 
+  const result = {
+    section: null,
+    items: [],
+  };
+
   console.log(`Trying to find deals in section #${sectionIndex}`);
-  const sectionLink = await page.$$eval(sectionHtmlElementName, (items, index) => {
+  const section = await page.$$eval(sectionHtmlElementName, (items, index) => {
     try {
+      const section = {
+        title: '',
+        link: '',
+      };
       console.log(`items ${items}`);
       items = items[index];
       console.log(`items ${items}`);
       const titleElement = items.querySelector('a.store-section-header__title');
       console.log(`titleElement ${titleElement}`);
-      const sectionTitle = titleElement ? titleElement.textContent : '';
-      const sectionLink = titleElement.href;
+      section.title = titleElement ? titleElement.textContent : '';
+      section.link = titleElement.href;
 
-      console.log(`sectionTitle ${sectionTitle}`);
-      console.log(`sectionLink ${sectionLink}`);
+      console.log(`sectionTitle ${section.title}`);
+      console.log(`sectionLink ${section.link}`);
 
-      return sectionLink;
+      return section;
     } catch (e) {
       console.log(`Failed to scrape section: ${e}`);
-      return [];
+      return null;
     }
   }, sectionIndex);
 
-  console.log(`Navigating to ${sectionLink}...`);
-  await page.goto(sectionLink);
+  if (!section) {
+    console.log(`Cannot get section info.`);
+    return result;
+  }
+
+  console.log(`Navigating to ${section.link}...`);
+  await page.goto(section.link);
 
   console.log('Wait for the required DOM to be rendered');
   await page.waitForSelector('div.section__items-cell');
   console.log('Found needed element');
 
-  const items = page.$$eval('div.section__items-cell', (items) => {
+  const items = await page.$$eval('div.section__items-cell', (items) => {
     const parsePrice = (str) => {
       const priceArray = /^(.*)\$(.*)/g.exec(str);
       const priceCurrency = `${priceArray[1]}$`; const priceValue = +priceArray[2];
@@ -97,20 +111,36 @@ const scrapeSection = async (page, sectionIndex) => {
     return items;
   });
 
-  return items;
+  result.section = section;
+  result.items = items;
+
+  return result;
 };
 
 const scraperObject = {
   url: 'https://www.oculus.com/experiences/quest/',
   async scraper(browser) {
     const page = await browser.newPage();
-    console.log(`Navigating to ${this.url}...`);
+    console.log(`Navigating to the main page ${this.url}...`);
     await page.goto(this.url);
 
-    const items = await scrapeSection(page, 1);
+    const result = {
+      sections: [],
+      items: [],
+    };
 
-    if (items.length != 0) {
-      return items;
+    const scrapedResult = await scrapeSection(page, 1);
+
+    if (scrapedResult.section && scrapedResult.section) {
+      result.sections.push(scrapedResult.section);
+    }
+
+    if (scrapedResult.items && scrapedResult.items.length != 0) {
+      console.log(`scrapedResult.items ${scrapedResult.items}`);
+      scrapedResult.items.forEach((element) => {
+        result.items.push(element);
+      });
+      return result;
     }
 
     console.log('Not found deals in 1st section');
@@ -132,7 +162,7 @@ const scraperObject = {
 
     if (link == undefined || link.length == 0) {
       console.log('Can\'t find game\'s link');
-      return [];
+      return result;
     }
 
     console.log(`Navigating to ${link}...`);
@@ -194,9 +224,10 @@ const scraperObject = {
       return game;
     });
     game['url'] = link;
-    items.push(game);
 
-    return items;
+    result.items.push(game);
+
+    return result;
   },
 };
 
