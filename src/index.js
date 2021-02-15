@@ -8,10 +8,24 @@ const isInDebugMode = () => {
 };
 
 const saveSections = (sections) => {
-  // TODO: save sections to the DB
   console.log('Saving sections to the DB...');
   sections.forEach((el) => {
     console.log(`section ${el.title} ${el.link}`);
+  });
+
+  const dbPath = './oculus_sections.db';
+  const db = new Datastore({filename: dbPath, autoload: true});
+  // TODO: think about uniqueness
+  // Using a unique constraint with the index
+  db.ensureIndex({fieldName: 'title', unique: true}, (err) => {
+    // ignore
+  });
+  db.insert(sections, function(err, newDocs) {
+    if (err) {
+      console.log(`Error inserting into DB ${dbPath}: ${err}`);
+      return;
+    }
+    console.log(`Inserted ${newDocs.length} records into DB  ${dbPath}`);
   });
 };
 
