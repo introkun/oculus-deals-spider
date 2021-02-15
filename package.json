@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run start-production",
     "start-production": "NODE_ENV=production node src/index.js",
-    "start-debug": "NODE_ENV=debug node src/index.js"
+    "start-debug": "NODE_ENV=debug node src/index.js",
+    "eslint": "eslint ./",
+    "precommit": "npm run eslint",
+    "postinstall": "husky install"
   },
   "author": "sergey g",
   "license": "MIT",
@@ -16,5 +19,9 @@
     "nedb": "^1.8.0",
     "puppeteer": "^7.0.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^7.20.0",
+    "husky": "^5.0.9"
+  }
 }

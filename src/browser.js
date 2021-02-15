@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer'
 
-async function startBrowser(headless = true) {
+const startBrowser = async function (headless = true) {
     let browser
     try {
         console.log("Opening the browser......")

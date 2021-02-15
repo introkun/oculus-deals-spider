@@ -32,7 +32,7 @@ const scrapeSection = async (page, sectionIndex) => {
     await page.waitForSelector('div.section__items-cell')
     console.log('Found needed element')
 
-    let items = page.$$eval('div.section__items-cell', items => {
+    const items = page.$$eval('div.section__items-cell', items => {
         const parsePrice = str => {
             const priceArray = /^(.*)\$(.*)/g.exec(str),
                 priceCurrency = `${priceArray[1]}$`, priceValue = +priceArray[2]
@@ -50,7 +50,7 @@ const scrapeSection = async (page, sectionIndex) => {
         })
 
         items = items.map(el => {
-            let obj = {}
+            const obj = {}
             obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText
 
             const dicsountString = el.querySelector('span.store-section-item-tag').innerText
@@ -101,11 +101,11 @@ const scrapeSection = async (page, sectionIndex) => {
 const scraperObject = {
     url: 'https://www.oculus.com/experiences/quest/',
     async scraper(browser){
-        let page = await browser.newPage()
+        const page = await browser.newPage()
         console.log(`Navigating to ${this.url}...`)
         await page.goto(this.url)
 
-        let items = await scrapeSection(page, 1)
+        const items = await scrapeSection(page, 1)
 
         if (items.length != 0)
             return items
@@ -150,7 +150,7 @@ const scraperObject = {
             }
 
             console.log("Found game block")
-            let game = {}
+            const game = {}
             const item = items[0]
             console.log("Looking for title")
             game["name"] = item.querySelector('.app-description__title').innerText

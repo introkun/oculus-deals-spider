@@ -9,11 +9,11 @@ const isInDebugMode = () => {
 
 //Start the browser and create a browser instance
 const startBrowserHeadless = !isInDebugMode()
-let browserInstance = browser.startBrowser(startBrowserHeadless)
+const browserInstance = browser.startBrowser(startBrowserHeadless)
 const scraperController = new ScraperController()
 
 // Pass the browser instance to the scraper controller
-let items = await scraperController.scrapeAll(browserInstance)
+let items = await scraperController.scrapeAll(browserInstance) // eslint-disable-line no-alert
 
 if (!isInDebugMode())
     scraperController.stopBrowser()
@@ -32,9 +32,9 @@ const now = new Date()
 items.map(el => el['createdAt'] = now.toISOString())
 
 const dbPath = config.get('DbPath')
-let db = new Datastore({filename: dbPath, autoload: true})
+const db = new Datastore({filename: dbPath, autoload: true})
 
-let lastWeek = new Date()
+const lastWeek = new Date()
 lastWeek.setDate(now.getDate() - 7) // minus 7 days
 
 console.log(`lastWeek: ${lastWeek.toISOString()}`)
@@ -55,7 +55,7 @@ db.find({
         return
     }
 
-    let existingGames = new Set() // ["game1", "game2"]
+    const existingGames = new Set() // ["game1", "game2"]
     docs.forEach(el => {
         existingGames.add(el.name)
     })
