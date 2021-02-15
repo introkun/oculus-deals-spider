@@ -9,7 +9,6 @@
     "start-production": "NODE_ENV=production node src/index.js",
     "start-debug": "NODE_ENV=debug node src/index.js",
     "eslint": "eslint ./",
-    "precommit": "npm run eslint",
     "postinstall": "husky install"
   },
   "author": "sergey g",
@@ -22,6 +21,7 @@
   "type": "module",
   "devDependencies": {
     "eslint": "^7.20.0",
+    "eslint-config-google": "^0.14.0",
     "husky": "^5.0.9"
   }
 }
