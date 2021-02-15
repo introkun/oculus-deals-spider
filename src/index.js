@@ -13,7 +13,7 @@ const saveSections = (sections) => {
     console.log(`section ${el.title} ${el.link}`);
   });
 
-  const dbPath = './oculus_sections.db';
+  const dbPath = '/opt/oculus_sections.db';
   const db = new Datastore({filename: dbPath, autoload: true});
   // TODO: think about uniqueness
   // Using a unique constraint with the index
