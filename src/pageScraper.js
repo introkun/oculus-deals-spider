@@ -17,6 +17,11 @@ const scrapeSection = async (page, sectionIndex) => {
         link: '',
       };
       console.log(`items ${items}`);
+
+      if (items.length - 1 < index) {
+        return section;
+      }
+
       items = items[index];
       console.log(`items ${items}`);
       const titleElement = items.querySelector('a.store-section-header__title');
@@ -117,6 +122,22 @@ const scrapeSection = async (page, sectionIndex) => {
   return result;
 };
 
+const processSection = async (page, sectionIndex, resultingObject) => {
+  const scrapedResult = await scrapeSection(page, sectionIndex);
+
+  if (scrapedResult && scrapedResult.section) {
+    resultingObject.sections.push(scrapedResult.section);
+    await page.goBack();
+  }
+
+  if (scrapedResult.items && scrapedResult.items.length != 0) {
+    console.log(`scrapedResult.items ${scrapedResult.items}`);
+    scrapedResult.items.forEach((element) => {
+      resultingObject.items.push(element);
+    });
+  }
+};
+
 const scraperObject = {
   url: 'https://www.oculus.com/experiences/quest/',
   async scraper(browser) {
@@ -129,26 +150,23 @@ const scraperObject = {
       items: [],
     };
 
-    const scrapedResult = await scrapeSection(page, 1);
+    await processSection(page, 1, result);
+    await processSection(page, 2, result);
 
-    if (scrapedResult.section && scrapedResult.section) {
-      result.sections.push(scrapedResult.section);
-    }
-
-    if (scrapedResult.items && scrapedResult.items.length != 0) {
-      console.log(`scrapedResult.items ${scrapedResult.items}`);
-      scrapedResult.items.forEach((element) => {
-        result.items.push(element);
-      });
+    if (result.items.length != 0) {
       return result;
     }
 
-    console.log('Not found deals in 1st section');
-    await page.goBack();
+    console.log('Not found deals in sections');
 
     console.log('Trying to find deals in \'Quest Picks\' section');
     console.log('Wait for the required DOM to be rendered');
-    await page.waitForSelector('span.store-section-item-price-label__promo');
+    try {
+      await page.waitForSelector('span.store-section-item-price-label__promo');
+    } catch (err) {
+      console.log('Can\'t find element');
+      return result;
+    }
     console.log('Found needed element');
 
     const selector = '.store-section-item-tag.store-section-item-tag__blue.' +
