@@ -1,3 +1,5 @@
 {
-    "DbPath": "./oculus_discounts.db"
+    "DbPath": "./oculus_discounts.db",
+    "SectionsDbPath": "./oculus_sections.db",
+    "ExperiencesDbPath": "./oculus_experiences.db"
 }
