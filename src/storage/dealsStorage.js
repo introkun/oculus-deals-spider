@@ -8,7 +8,7 @@ class DealsStorage {
     this.db = new Datastore({filename: this.dealsDbPath, autoload: true});
   }
 
-  save(deals) {
+  async save(deals) {
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7); // minus 7 days
 

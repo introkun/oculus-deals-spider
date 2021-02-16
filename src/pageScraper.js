@@ -16,7 +16,7 @@ const scrapeSection = async (page, sectionIndex) => {
         title: '',
         link: '',
       };
-      console.log(`items ${items}`);
+      console.log(`available sections ${items}`);
 
       if (items.length - 1 < index) {
         return section;
@@ -39,7 +39,7 @@ const scrapeSection = async (page, sectionIndex) => {
     }
   }, sectionIndex);
 
-  if (!section) {
+  if (!section || section.title.length == 0) {
     console.log(`Cannot get section info.`);
     return result;
   }
@@ -64,52 +64,61 @@ const scrapeSection = async (page, sectionIndex) => {
       return obj;
     };
 
-    items = items.filter((el) => {
-      return el.querySelector('span.store-section-item-tag');
-    });
+    const discountSelector = 'span.store-section-item-tag';
 
     items = items.map((el) => {
       const obj = {};
       obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText;
 
-      const dicsountString = el.querySelector('span.store-section-item-tag').innerText;
-      const discountValue = /^-(.*)%$/g.exec(dicsountString)[1];
-      obj['discountPercent'] = +discountValue;
+      const discountElement = el.querySelector(discountSelector);
+      if (discountElement) {
+        const dicsountString = discountElement.innerText;
+        const discountValue = /^-(.*)%$/g.exec(dicsountString)[1];
+        obj['discountPercent'] = +discountValue;
 
-      const salePriceSelector = 'span.store-section-item-price-label__sale-price > span';
-      const salePrice = el.querySelector(salePriceSelector).innerText;
-      const salePriceObj = parsePrice(salePrice);
-      console.log(`salePriceObj ${salePriceObj}`);
-      obj['salePrice'] = salePriceObj.value;
-      obj['salePriceCurrency'] = salePriceObj.currency;
+        const salePriceSelector = 'span.store-section-item-price-label__sale-price > span';
+        const salePrice = el.querySelector(salePriceSelector).innerText;
+        const salePriceObj = parsePrice(salePrice);
+        console.log(`salePriceObj ${salePriceObj}`);
+        obj['salePrice'] = salePriceObj.value;
+        obj['salePriceCurrency'] = salePriceObj.currency;
 
-      const priceSelector = 's.store-section-item-price-label__strikethrough-price > span';
+        try {
+          const now = Date.now();
+          const timer = el.querySelector('span.store-item-countdown-timer__timer').innerText;
+          console.log(`timer ${timer}`);
+          const timeSplitted = timer.split(':');
+          if (timeSplitted.length > 0) {
+            const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
+                          Number(timeSplitted[2])) * 1000;
+            console.log(`endsInMs ${endsInMs}`);
+            const endsUtcDate = new Date(now + endsInMs);
+            console.log(`endsUtcDate ${endsUtcDate}`);
+            obj['endsUtc'] = endsUtcDate.toISOString();
+          } else {
+            // TODO: parse days
+          }
+        } catch (e) {
+          console.log(`failed to parse end date: ${e}`);
+        }
+      }
+
+      const discountedPriceSelector = 's.store-section-item-price-label__strikethrough-price' +
+        ' > span';
+      const normalPriceSelector = 'div.store-section-item-byline__price > span';
+      const priceSelector = discountElement ? discountedPriceSelector : normalPriceSelector;
       const price = el.querySelector(priceSelector).innerText;
       const priceObj = parsePrice(price);
       console.log(`priceObj ${priceObj}`);
       obj['price'] = priceObj.value;
       obj['priceCurrency'] = priceObj.currency;
 
-      try {
-        const now = Date.now();
-        const timer = el.querySelector('span.store-item-countdown-timer__timer').innerText;
-        console.log(`timer ${timer}`);
-        const timeSplitted = timer.split(':');
-        if (timeSplitted.length > 0) {
-          const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
-                        Number(timeSplitted[2])) * 1000;
-          console.log(`endsInMs ${endsInMs}`);
-          const endsUtcDate = new Date(now + endsInMs);
-          console.log(`endsUtcDate ${endsUtcDate}`);
-          obj['endsUtc'] = endsUtcDate.toISOString();
-        } else {
-          // TODO: parse days
-        }
-      } catch (e) {
-        console.log(`failed to parse end date: ${e}`);
-      }
-
       obj['url'] = el.querySelector('a.store-section-item-tile').href;
+
+      const imageElement = el.querySelector('a.store-section-item-tile');
+      const backgroundImage = window.getComputedStyle(imageElement).backgroundImage;
+      const backgroundImageUrl = backgroundImage.substring(5, backgroundImage.length - 2);
+      obj['small_image'] = backgroundImageUrl;
 
       return obj;
     });
@@ -131,7 +140,6 @@ const processSection = async (page, sectionIndex, resultingObject) => {
   }
 
   if (scrapedResult.items && scrapedResult.items.length != 0) {
-    console.log(`scrapedResult.items ${scrapedResult.items}`);
     scrapedResult.items.forEach((element) => {
       resultingObject.items.push(element);
     });
