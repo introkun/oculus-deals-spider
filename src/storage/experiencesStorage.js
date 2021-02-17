@@ -17,13 +17,15 @@ class ExperiencesStorage {
       console.log(`experience ${el.name} ${el.url}`);
     });
 
-    this.db.insert(experiences, function(err, newDocs) {
-      if (err) {
-        console.log(`Error inserting into DB ${this.experiencesDbPath}: ${err}`);
-        return;
-      }
-      console.log(`Inserted ${newDocs.length} records into DB  ${this.experiencesDbPath}`);
-    }.bind(this));
+    experiences.forEach((experience) => {
+      this.db.update({url: experience.url}, experience, {upsert: true},
+          function(err) {
+            if (err) {
+              console.log(`Error updating DB ${this.experiencesDbPath}: ${err}`);
+              return;
+            }
+          }.bind(this));
+    });
   }
 }
 

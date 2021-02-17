@@ -6,7 +6,7 @@ class SectionsStorage {
     this.sectionsDbPath = config.get('SectionsDbPath');
 
     this.db = new Datastore({filename: this.sectionsDbPath, autoload: true});
-    this.db.ensureIndex({fieldName: 'title', unique: true}, (err) => {
+    this.db.ensureIndex({fieldName: 'link', unique: true}, (err) => {
       // ignore
     });
   }
@@ -17,13 +17,15 @@ class SectionsStorage {
       console.log(`section ${el.title} ${el.link}`);
     });
 
-    this.db.insert(sections, function(err, newDocs) {
-      if (err) {
-        console.log(`Error inserting into DB ${this.sectionsDbPath}: ${err}`);
-        return;
-      }
-      console.log(`Inserted ${newDocs.length} records into DB  ${this.sectionsDbPath}`);
-    }.bind(this));
+    sections.forEach((section) => {
+      this.db.update({link: section.link}, section, {upsert: true},
+          function(err) {
+            if (err) {
+              console.log(`Error updating DB ${this.sectionsDbPath}: ${err}`);
+              return;
+            }
+          }.bind(this));
+    });
   }
 }
 

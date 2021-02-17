@@ -161,16 +161,11 @@ const scraperObject = {
     await processSection(page, 1, result);
     await processSection(page, 2, result);
 
-    if (result.items.length != 0) {
-      return result;
-    }
-
-    console.log('Not found deals in sections');
-
     console.log('Trying to find deals in \'Quest Picks\' section');
     console.log('Wait for the required DOM to be rendered');
     try {
-      await page.waitForSelector('span.store-section-item-price-label__promo');
+      await page.waitForSelector('span.store-section-item-price-label__promo',
+          {timeout: 40000});
     } catch (err) {
       console.log('Can\'t find element');
       return result;
