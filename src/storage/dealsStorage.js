@@ -45,8 +45,17 @@ class DealsStorage {
         return;
       }
 
-      console.log(`Non-duplicate items to insert into DB: ${deals}`);
-      this.db.insert(deals, function(err, newDocs) {
+      const uniqueDeals = new Map();
+      deals.forEach((el) => {
+        uniqueDeals.set(el.name, el);
+      });
+      const uniqueDealsArray = [];
+      uniqueDeals.forEach((value, key) => {
+        uniqueDealsArray.push(value);
+      });
+
+      console.log(`Non-duplicate items to insert into DB: ${uniqueDealsArray}`);
+      this.db.insert(uniqueDealsArray, function(err, newDocs) {
         if (err) {
           console.log(`Error inserting into DB ${this.dealsDbPath}: ${err}`);
           return;
