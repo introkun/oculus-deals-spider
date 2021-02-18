@@ -16,7 +16,8 @@
   "dependencies": {
     "config": "^3.3.3",
     "nedb": "^1.8.0",
-    "puppeteer": "^7.0.0"
+    "puppeteer": "^7.0.0",
+    "yargs": "^16.2.0"
   },
   "type": "module",
   "devDependencies": {

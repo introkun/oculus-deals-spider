@@ -1,8 +1,26 @@
+import yargs from 'yargs';
+import {hideBin} from 'yargs/helpers';
+
 import browser from './browser.js';
+
 import ScraperController from './pageController.js';
 import DealsStorage from './storage/dealsStorage.js';
 import SectionsStorage from './storage/sectionsStorage.js';
 import ExperiencesStorage from './storage/experiencesStorage.js';
+
+const SCRAPE_SECTION_COMMAND = 'scrape-section';
+
+const argv = yargs(hideBin(process.argv))
+    .command(SCRAPE_SECTION_COMMAND, 'Scrapes section by URL', {
+      url: {
+        description: 'url of the section (e.g. https://www.oculus.com/experiences/' +
+          'quest/section/2228099660560866/)',
+        alias: 's',
+        type: 'string',
+      },
+    })
+    .help().alias('help', 'h')
+    .argv;
 
 const isInDebugMode = () => {
   return process.env.NODE_ENV && process.env.NODE_ENV === 'debug';
@@ -14,8 +32,20 @@ async function main() {
   const browserInstance = browser.startBrowser(startBrowserHeadless);
   const scraperController = new ScraperController();
 
-  // Pass the browser instance to the scraper controller
-  const result = await scraperController.scrapeAll(browserInstance);
+  let result = [];
+
+  if (argv._.includes(SCRAPE_SECTION_COMMAND)) {
+    const url = argv.url;
+    if (!url) {
+      console.log(`No URL specified for command ${SCRAPE_SECTION_COMMAND}`);
+      return;
+    }
+    console.log(`Start scraping single section ${url}`);
+    result = await scraperController.scrapeSection(browserInstance, url);
+  } else {
+    console.log(`Start scraping everything`);
+    result = await scraperController.scrapeAll(browserInstance);
+  }
 
   if (!isInDebugMode()) {
     scraperController.stopBrowser();
@@ -28,7 +58,9 @@ async function main() {
 
   if (!result.items || result.items.length == 0) {
     console.log('No items found');
-    process.exit(0);
+    if (!isInDebugMode()) {
+      process.exit(0);
+    }
   }
 
   const deals = [];
