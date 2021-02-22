@@ -1,4 +1,5 @@
 const SECTION_HTML_ELEMENT = 'div.store__section';
+const MAIN_PAGE = 'https://www.oculus.com/experiences/quest/';
 
 const scrapeGrid = async (page, cellSelector) => {
   const items = await page.$$eval(cellSelector, (items) => {
@@ -161,12 +162,14 @@ const _scrapeSection = async (page, sectionData) => {
   return result;
 };
 
-const processSection = async (page, sectionData, resultingObject) => {
+const processSection = async (page, sectionData, resultingObject, goToMain = false) => {
   const scrapedResult = await _scrapeSection(page, sectionData);
 
   if (scrapedResult && scrapedResult.section) {
     resultingObject.sections.push(scrapedResult.section);
-    await page.goBack();
+    if (goToMain) {
+      await page.goto(MAIN_PAGE);
+    }
   }
 
   if (scrapedResult.items && scrapedResult.items.length != 0) {
@@ -177,7 +180,13 @@ const processSection = async (page, sectionData, resultingObject) => {
 };
 
 const scrapeMainPage = async (page, result) => {
-  const items = await scrapeGrid(page, 'div.store-section-items__cell');
+  const cellSelector = 'div.store-section-items__cell';
+  try {
+    await page.waitForSelector(cellSelector);
+  } catch (err) {
+    console.log('Can\'t find element');
+  }
+  const items = await scrapeGrid(page, cellSelector);
   if (items) {
     items.forEach((el) => {
       result.items.push(el);
@@ -205,7 +214,7 @@ const scrapeAll = async (browser, mainUrl) => {
 
   const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
   for (let index = 1; index < sectionsCount; index++) {
-    await processSection(page, {index: index}, result);
+    await processSection(page, {index: index}, result, true);
   }
   await processSection(page,
       {url: 'https://www.oculus.com/experiences/quest/section/2228099660560866/'}, result);
@@ -232,7 +241,7 @@ const scrapeAll = async (browser, mainUrl) => {
   await processSection(page,
       {url: 'https://www.oculus.com/experiences/quest/section/2385850384822599/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/336976240361150/'}, result);
+      {url: 'https://www.oculus.com/experiences/quest/section/336976240361150/'}, result, true);
 
   await scrapeMainPage(page, result);
 
@@ -342,10 +351,9 @@ const scrapeSection = async (browser, sectionUrl) => {
 };
 
 const scraperObject = {
-  url: 'https://www.oculus.com/experiences/quest/',
   async scraper(browser, sectionUrl = '') {
     if (sectionUrl.length == '') {
-      return await scrapeAll(browser, this.url);
+      return await scrapeAll(browser, MAIN_PAGE);
     } else {
       return await scrapeSection(browser, sectionUrl);
     }
