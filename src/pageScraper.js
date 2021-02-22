@@ -192,6 +192,8 @@ const scrapeMainPage = async (page, result) => {
       result.items.push(el);
     });
   }
+
+  await page.screenshot({path: './mainpage.png'});
 };
 
 const scrapeAll = async (browser, mainUrl) => {

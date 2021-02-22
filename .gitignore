@@ -5,3 +5,5 @@ node_modules
 *.db
 
 config/debug.json
+
+mainpage.png
