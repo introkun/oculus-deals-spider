@@ -6,14 +6,14 @@ const scrapeGrid = async (page, cellSelector) => {
     const parsePrice = (str) => {
       const obj = {};
 
-      if (str === 'Free') {
+      if (str === 'Free' || str === 'Get') {
         obj['currency'] = '';
         obj['value'] = 0;
         return obj;
       }
       const priceArray = /^(.*)\$(.*)/g.exec(str);
-      const priceCurrency = `${priceArray[1]}$`; const priceValue = +priceArray[2];
       console.log(`priceArray ${priceArray}`);
+      const priceCurrency = `${priceArray[1]}$`; const priceValue = +priceArray[2];
       console.log(`priceCurrency ${priceCurrency}`);
       console.log(`priceValue ${priceValue}`);
 
@@ -287,8 +287,9 @@ const scrapeAll = async (browser, mainUrl) => {
     const game = await page.$$eval('div.app__row', (items) => {
       const parsePrice = (str) => {
         const priceArray = /^(.*)\$(.*)/g.exec(str);
-        const priceCurrency = `${priceArray[1]}$`; const priceValue = +priceArray[2];
         console.log(`priceArray ${priceArray}`);
+        const priceCurrency = `${priceArray[1]}$`;
+        const priceValue = +priceArray[2];
         console.log(`priceCurrency ${priceCurrency}`);
         console.log(`priceValue ${priceValue}`);
         const obj = {};
