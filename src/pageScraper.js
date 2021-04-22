@@ -65,8 +65,13 @@ const scrapeGrid = async (page, cellSelector) => {
         ' > span';
       const normalPriceSelector = 'div.store-section-item-byline__price > span';
       const priceSelector = discountElement ? discountedPriceSelector : normalPriceSelector;
-      const price = el.querySelector(priceSelector).innerText;
-      const priceObj = parsePrice(price);
+      console.log(`priceSelector ${priceSelector}`);
+      const price = el.querySelector(priceSelector);
+      if (!price) {
+        return;
+      }
+      console.log(`price ${price}`);
+      const priceObj = parsePrice(price.innerText);
       console.log(`priceObj ${priceObj}`);
       obj['price'] = priceObj.value;
       obj['priceCurrency'] = priceObj.currency;
@@ -78,10 +83,13 @@ const scrapeGrid = async (page, cellSelector) => {
       const backgroundImageUrl = backgroundImage.substring(5, backgroundImage.length - 2);
       obj['small_image'] = backgroundImageUrl;
 
+      console.log(`return obj ${obj}`);
       return obj;
     });
+    console.log(`return items ${items}`);
     return items;
   });
+  console.log(`return items ${items}`);
   return items;
 };
 
@@ -189,6 +197,9 @@ const scrapeMainPage = async (page, result) => {
   const items = await scrapeGrid(page, cellSelector);
   if (items) {
     items.forEach((el) => {
+      if (!el) {
+        return;
+      }
       result.items.push(el);
     });
   }
@@ -249,7 +260,11 @@ const scrapeAll = async (browser, mainUrl) => {
       {url: 'https://www.oculus.com/experiences/quest/section/336976240361150/'}, result, true);
 
   console.log('Scraping main page experiences & deals...');
-  await scrapeMainPage(page, result);
+  try {
+    await scrapeMainPage(page, result);
+  } catch (err) {
+    console.log('Can\'t scrape main page: ' + err);
+  }
 
   try {
     console.log('Trying to find deals in the top carousel...');
