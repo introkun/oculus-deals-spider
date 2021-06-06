@@ -69,6 +69,9 @@ async function main() {
 
   console.log(`Scraped items:`);
   result.items.forEach((item) => {
+    if (!item) { // TODO: find this case
+      return;
+    }
     console.log(item);
     experiences.push(item);
     if (item.discountPercent) {
