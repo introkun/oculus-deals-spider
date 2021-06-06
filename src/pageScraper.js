@@ -23,14 +23,17 @@ const scrapeGrid = async (page, cellSelector) => {
     };
 
     const discountSelector = 'span.store-section-item-tag';
-    const preorderItemSelector = 'store-section-item-byline__preorder';
+    const preorderItemSelector = 'span.store-section-item-byline__preorder';
 
     items = items.map((el) => {
       const obj = {};
       obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText;
 
       const discountElement = el.querySelector(discountSelector);
-      if (discountElement && discountElement !== preorderItemSelector) {
+      const preorderElement = el.querySelector(preorderItemSelector);
+      console.log(`preorderElement ${preorderElement}`);
+
+      if (discountElement && discountElement !== preorderElement) {
         const dicsountString = discountElement.innerText;
         const discountValue = /^-(.*)%$/g.exec(dicsountString)[1];
         obj['discountPercent'] = +discountValue;
@@ -68,14 +71,19 @@ const scrapeGrid = async (page, cellSelector) => {
       const priceSelector = discountElement ? discountedPriceSelector : normalPriceSelector;
       console.log(`priceSelector ${priceSelector}`);
       const price = el.querySelector(priceSelector);
+
       if (!price) {
         return;
       }
-      console.log(`price ${price}`);
-      const priceObj = parsePrice(price.innerText);
-      console.log(`priceObj ${priceObj}`);
-      obj['price'] = priceObj.value;
-      obj['priceCurrency'] = priceObj.currency;
+
+      // preorder elements are not yet supported
+      if (!preorderElement) {
+        console.log(`price ${price}`);
+        const priceObj = parsePrice(price.innerText);
+        console.log(`priceObj ${priceObj}`);
+        obj['price'] = priceObj.value;
+        obj['priceCurrency'] = priceObj.currency;
+      }
 
       obj['url'] = el.querySelector('a.store-section-item-tile').href;
 
@@ -227,10 +235,10 @@ const scrapeAll = async (browser, mainUrl) => {
     return result;
   }
 
-  // const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
-  // for (let index = 1; index < sectionsCount; index++) {
-  //   await processSection(page, {index: index}, result, true);
-  // }
+  const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
+  for (let index = 1; index < sectionsCount; index++) {
+    await processSection(page, {index: index}, result, true);
+  }
 
   console.log('Scraping favourite sections...');
   await processSection(page,
