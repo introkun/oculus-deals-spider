@@ -23,13 +23,14 @@ const scrapeGrid = async (page, cellSelector) => {
     };
 
     const discountSelector = 'span.store-section-item-tag';
+    const preorderItemSelector = 'store-section-item-byline__preorder';
 
     items = items.map((el) => {
       const obj = {};
       obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText;
 
       const discountElement = el.querySelector(discountSelector);
-      if (discountElement) {
+      if (discountElement && discountElement !== preorderItemSelector) {
         const dicsountString = discountElement.innerText;
         const discountValue = /^-(.*)%$/g.exec(dicsountString)[1];
         obj['discountPercent'] = +discountValue;
@@ -226,10 +227,10 @@ const scrapeAll = async (browser, mainUrl) => {
     return result;
   }
 
-  const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
-  for (let index = 1; index < sectionsCount; index++) {
-    await processSection(page, {index: index}, result, true);
-  }
+  // const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
+  // for (let index = 1; index < sectionsCount; index++) {
+  //   await processSection(page, {index: index}, result, true);
+  // }
 
   console.log('Scraping favourite sections...');
   await processSection(page,
