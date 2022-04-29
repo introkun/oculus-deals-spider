@@ -85,12 +85,18 @@ const scrapeGrid = async (page, cellSelector) => {
         obj['priceCurrency'] = priceObj.currency;
       }
 
-      obj['url'] = el.querySelector('a.store-section-item-tile').href;
-
       const imageElement = el.querySelector('a.store-section-item-tile');
-      const backgroundImage = window.getComputedStyle(imageElement).backgroundImage;
-      const backgroundImageUrl = backgroundImage.substring(5, backgroundImage.length - 2);
-      obj['small_image'] = backgroundImageUrl;
+
+      if (imageElement) {
+        obj['url'] = el.querySelector('a.store-section-item-tile').href;
+
+        const backgroundImage = window.getComputedStyle(imageElement).backgroundImage;
+        const backgroundImageUrl = backgroundImage.substring(5, backgroundImage.length - 2);
+        obj['small_image'] = backgroundImageUrl;
+      } else {
+        obj['url'] = '';
+        obj['small_image'] = '';
+      }
 
       console.log(`return obj ${obj}`);
       return obj;
