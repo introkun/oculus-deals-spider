@@ -122,9 +122,14 @@ const _scrapeSection = async (page, sectionData) => {
   let section = {};
 
   if (sectionData.index !== undefined) {
-    console.log('Wait for the required DOM to be rendered');
-    await page.waitForSelector(SECTION_HTML_ELEMENT);
-    console.log('Found needed element');
+    console.log('Wait for the required DOM to be rendered in _scrapeSection');
+    try {
+      await page.waitForSelector(SECTION_HTML_ELEMENT);
+    } catch (error) {
+      console.log(`Failed to find '${SECTION_HTML_ELEMENT}'`);
+      return result;
+    }
+    console.log('Found needed element in _scrapeSection');
 
     console.log(`Trying to find deals in section #${sectionData.index}`);
     section = await page.$$eval(SECTION_HTML_ELEMENT, (items, index) => {
@@ -168,16 +173,25 @@ const _scrapeSection = async (page, sectionData) => {
   await page.goto(section.link);
 
   console.log('Wait for the required DOM to be rendered');
-  await page.waitForSelector('div.section__items-cell');
+  const SELECTOR_SECTION_ITEMS_CELL = 'li.section__items-cell';
+  let selector = SELECTOR_SECTION_ITEMS_CELL;
+  try {
+    await page.waitForSelector(selector, {timeout: 5000});
+  } catch (error) {
+    console.log(`Failed to find '${selector}'.`);
+    await page.goBack();
+    return result;
+  }
   console.log('Found needed element');
 
-  const sectionTitle = await page.$eval('div.section-header__title', (el) => el.innerText);
+  selector = 'h1.section-header__title';
+  const sectionTitle = await page.$eval(selector, (el) => el.innerText);
   if (!sectionTitle) {
     return result;
   }
   section['title'] = sectionTitle;
 
-  const items = await scrapeGrid(page, 'div.section__items-cell');
+  const items = await scrapeGrid(page, SELECTOR_SECTION_ITEMS_CELL);
 
   result.section = section;
   result.items = items;
@@ -242,6 +256,7 @@ const scrapeAll = async (browser, mainUrl) => {
   }
 
   const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
+  console.log(`Sections count: ${sectionsCount}`);
   for (let index = 1; index < sectionsCount; index++) {
     await processSection(page, {index: index}, result, true);
   }
