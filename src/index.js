@@ -8,6 +8,19 @@ import DealsStorage from './storage/dealsStorage.js';
 import SectionsStorage from './storage/sectionsStorage.js';
 import ExperiencesStorage from './storage/experiencesStorage.js';
 
+import Rollbar from 'rollbar';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const ROLLBAR_SERVER_TOKEN = process.env.ROLLBAR_SERVER_TOKEN;
+
+const rollbar = new Rollbar({
+  accessToken: ROLLBAR_SERVER_TOKEN,
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+});
+
 const SCRAPE_SECTION_COMMAND = 'scrape-section';
 
 const argv = yargs(hideBin(process.argv))
@@ -30,7 +43,7 @@ async function main() {
   // Start the browser and create a browser instance
   const startBrowserHeadless = !isInDebugMode();
   const browserInstance = browser.startBrowser(startBrowserHeadless);
-  const scraperController = new ScraperController();
+  const scraperController = new ScraperController(rollbar);
 
   let result = [];
 

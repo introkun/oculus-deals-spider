@@ -39,6 +39,7 @@ jobs:
 
             echo "Writing config wile"
             echo "${{vars.PROD_CONFIG}}" > config/production.json
+            echo "${{secrets.ROLLBAR_SERVER_TOKEN}}" > .env
 
             echo "Renaming current app folder"
             mv $appDir $appDir.$(date +\%Y\%m\%d\%H\%M\%S)
