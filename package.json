@@ -9,7 +9,7 @@
     "start-production": "NODE_ENV=production node src/index.js",
     "start-debug": "NODE_ENV=debug node src/index.js",
     "eslint": "eslint ./",
-    "postinstall": "husky install"
+    "postinstall": "husky"
   },
   "author": "sergey g",
   "license": "MIT",
