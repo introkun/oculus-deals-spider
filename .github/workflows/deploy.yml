@@ -33,6 +33,8 @@ jobs:
             git clone https://github.com/introkun/oculus-deals-spider.git .
 
             echo "Installing app dependencies"
+            export NVM_DIR=~/.nvm
+            source ~/.nvm/nvm.sh
             npm ci
 
             echo "Writing config wile"
