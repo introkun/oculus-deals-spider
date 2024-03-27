@@ -24,8 +24,11 @@ jobs:
 
             appName=oculus-deals-spider
             appDir=/opt/$appName
-            tempDir=$(mktemp -d /opt/oculus-deals-spider.XXXXXXXXX)
-            mkdir $tempDir
+            tempDir=$(mktemp -d /tmp/oculus-deals-spider.XXXXXXXXX)
+
+            rm -rf "$tempDir"  # Remove existing temp directory if it exists
+            mkdir -p "$tempDir"  # Recreate temp directory
+
             cd $tempDir
             git clone git@github.com:introkun/oculus-deals-spider.git .
 
@@ -33,7 +36,7 @@ jobs:
             npm ci
 
             echo "Writing config wile"
-            echo "${{secrets.CONFIG}}" > config/production.json
+            echo "${{vars.PROD_CONFIG}}" > config/production.json
 
             echo "Renaming current app folder"
             mv $appDir $appDir.$(date +\%Y\%m\%d\%H\%M\%S)
