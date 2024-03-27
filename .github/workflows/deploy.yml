@@ -20,6 +20,8 @@ jobs:
           username: ${{secrets.SSH_USERNAME}}
           
           script: |
+            set -e
+
             appName=oculus-deals-spider
             appDir=/opt/$appName
             tempDir=$(mktemp -d /opt/oculus-deals-spider.XXXXXXXXX)
