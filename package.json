@@ -14,15 +14,15 @@
   "author": "sergey g",
   "license": "MIT",
   "dependencies": {
-    "config": "^3.3.3",
+    "config": "^3.3.11",
     "nedb": "^1.8.0",
-    "puppeteer": "^7.0.0",
-    "yargs": "^16.2.0"
+    "puppeteer": "^22.6.1",
+    "yargs": "^17.7.2"
   },
   "type": "module",
   "devDependencies": {
-    "eslint": "^7.20.0",
+    "eslint": "^8.57.0",
     "eslint-config-google": "^0.14.0",
-    "husky": "^5.0.9"
+    "husky": "^9.0.11"
   }
 }

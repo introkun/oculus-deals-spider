@@ -13,8 +13,8 @@ const SCRAPE_SECTION_COMMAND = 'scrape-section';
 const argv = yargs(hideBin(process.argv))
     .command(SCRAPE_SECTION_COMMAND, 'Scrapes section by URL', {
       url: {
-        description: 'url of the section (e.g. https://www.oculus.com/experiences/' +
-          'quest/section/2228099660560866/)',
+        description: 'url of the section (e.g. https://www.meta.com/en-gb/experiences/' +
+            'section/2228099660560866/)',
         alias: 's',
         type: 'string',
       },

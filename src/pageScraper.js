@@ -1,5 +1,7 @@
+import {setTimeout} from 'node:timers/promises';
+
 const SECTION_HTML_ELEMENT = 'div.store__section';
-const MAIN_PAGE = 'https://www.oculus.com/experiences/quest/';
+const MAIN_PAGE = 'https://www.meta.com/en-gb/experiences/';
 
 const scrapeGrid = async (page, cellSelector) => {
   const items = await page.$$eval(cellSelector, (items) => {
@@ -22,55 +24,67 @@ const scrapeGrid = async (page, cellSelector) => {
       return obj;
     };
 
-    const discountSelector = 'span.store-section-item-tag';
+    if (!items) {
+      console.log(`No items found in the grid for page '${page}' and selector '${cellSelector}'.`);
+      return [];
+    }
+
     const preorderItemSelector = 'span.store-section-item-byline__preorder';
 
     items = items.map((el) => {
       const obj = {};
-      obj['name'] = el.querySelector('div.store-section-item__meta-name').innerText;
 
-      const discountElement = el.querySelector(discountSelector);
+      if (!el) {
+        return;
+      }
+
+      obj['name'] = document.evaluate('.//div/div/*[1]', el, null,
+          XPathResult.STRING_TYPE, null).stringValue;
+
+      const discountElement = document.evaluate('.//span[@xstyle]', el, null,
+          XPathResult.STRING_TYPE, null);
       const preorderElement = el.querySelector(preorderItemSelector);
       console.log(`preorderElement ${preorderElement}`);
 
-      if (discountElement && discountElement !== preorderElement) {
-        const dicsountString = discountElement.innerText;
-        const discountValue = /^-(.*)%$/g.exec(dicsountString)[1];
+      let price = null;
+
+      if (discountElement && discountElement.stringValue.length > 0) {
+        const discountString = discountElement.stringValue;
+        const discountValue = /^-(.*)%$/g.exec(discountString)[1];
         obj['discountPercent'] = +discountValue;
 
-        const salePriceSelector = 'span.store-section-item-price-label__sale-price > span';
-        const salePrice = el.querySelector(salePriceSelector).innerText;
+        const salePrice = document.evaluate('.//span/span/span/*[1]', el, null,
+            XPathResult.STRING_TYPE, null).stringValue;
         const salePriceObj = parsePrice(salePrice);
         console.log(`salePriceObj ${salePriceObj}`);
         obj['salePrice'] = salePriceObj.value;
         obj['salePriceCurrency'] = salePriceObj.currency;
 
-        try {
-          const now = Date.now();
-          const timer = el.querySelector('span.store-item-countdown-timer__timer').innerText;
-          console.log(`timer ${timer}`);
-          const timeSplitted = timer.split(':');
-          if (timeSplitted.length > 0) {
-            const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
-                          Number(timeSplitted[2])) * 1000;
-            console.log(`endsInMs ${endsInMs}`);
-            const endsUtcDate = new Date(now + endsInMs);
-            console.log(`endsUtcDate ${endsUtcDate}`);
-            obj['endsUtc'] = endsUtcDate.toISOString();
-          } else {
-            // TODO: parse days
-          }
-        } catch (e) {
-          console.log(`failed to parse end date: ${e}`);
-        }
-      }
+        price = document.evaluate('.//span/span/s/span', el, null,
+            XPathResult.STRING_TYPE, null).stringValue;
 
-      const discountedPriceSelector = 's.store-section-item-price-label__strikethrough-price' +
-        ' > span';
-      const normalPriceSelector = 'div.store-section-item-byline__price > span';
-      const priceSelector = discountElement ? discountedPriceSelector : normalPriceSelector;
-      console.log(`priceSelector ${priceSelector}`);
-      const price = el.querySelector(priceSelector);
+        // try {
+        //   const now = Date.now();
+        //   const timer = el.querySelector('span.store-item-countdown-timer__timer').innerText;
+        //   console.log(`timer ${timer}`);
+        //   const timeSplitted = timer.split(':');
+        //   if (timeSplitted.length > 0) {
+        //     const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
+        //       Number(timeSplitted[2])) * 1000;
+        //     console.log(`endsInMs ${endsInMs}`);
+        //     const endsUtcDate = new Date(now + endsInMs);
+        //     console.log(`endsUtcDate ${endsUtcDate}`);
+        //     obj['endsUtc'] = endsUtcDate.toISOString();
+        //   } else {
+        //     // TODO: parse days
+        //   }
+        // } catch (e) {
+        //   console.log(`failed to parse end date: ${e}`);
+        // }
+      } else {
+        price = document.evaluate('.//span/span/span', el, null,
+            XPathResult.STRING_TYPE, null).stringValue;
+      }
 
       if (!price) {
         return;
@@ -79,19 +93,19 @@ const scrapeGrid = async (page, cellSelector) => {
       // preorder elements are not yet supported
       if (!preorderElement) {
         console.log(`price ${price}`);
-        const priceObj = parsePrice(price.innerText);
+        const priceObj = parsePrice(price);
         console.log(`priceObj ${priceObj}`);
         obj['price'] = priceObj.value;
         obj['priceCurrency'] = priceObj.currency;
       }
 
-      const imageElement = el.querySelector('a.store-section-item-tile');
+      const imageElement = el.querySelector('a');
 
       if (imageElement) {
-        obj['url'] = el.querySelector('a.store-section-item-tile').href;
+        obj['url'] = imageElement.href;
 
-        const backgroundImage = window.getComputedStyle(imageElement).backgroundImage;
-        const backgroundImageUrl = backgroundImage.substring(5, backgroundImage.length - 2);
+        const style = imageElement.currentStyle || window.getComputedStyle(imageElement, false);
+        const backgroundImageUrl = style.backgroundImage.slice(5, -2).replace(/"/g, '');
         obj['small_image'] = backgroundImageUrl;
       } else {
         obj['url'] = '';
@@ -172,8 +186,21 @@ const _scrapeSection = async (page, sectionData) => {
   console.log(`Navigating to ${section.link}...`);
   await page.goto(section.link);
 
+  console.log('Start scrolling...');
+  await page.evaluate(async () => {
+    let scrollCount = 10;
+
+    while (scrollCount-- > 0) {
+      window.scrollBy(0, 300);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 500);
+      });
+    }
+  });
+  console.log('Finish scrolling.');
+
   console.log('Wait for the required DOM to be rendered');
-  const SELECTOR_SECTION_ITEMS_CELL = 'li.section__items-cell';
+  const SELECTOR_SECTION_ITEMS_CELL = 'li';
   let selector = SELECTOR_SECTION_ITEMS_CELL;
   try {
     await page.waitForSelector(selector, {timeout: 5000});
@@ -184,8 +211,9 @@ const _scrapeSection = async (page, sectionData) => {
   }
   console.log('Found needed element');
 
-  selector = 'h1.section-header__title';
-  const sectionTitle = await page.$eval(selector, (el) => el.innerText);
+  selector = '//section/div/h1';
+  let sectionTitle = await page.waitForSelector('xpath/' + selector);
+  sectionTitle = await sectionTitle.evaluate((node) => node.innerText);
   if (!sectionTitle) {
     return result;
   }
@@ -216,25 +244,25 @@ const processSection = async (page, sectionData, resultingObject, goToMain = fal
   }
 };
 
-const scrapeMainPage = async (page, result) => {
-  const cellSelector = 'div.store-section-items__cell';
-  try {
-    await page.waitForSelector(cellSelector);
-  } catch (err) {
-    console.log('Can\'t find element');
-  }
-  const items = await scrapeGrid(page, cellSelector);
-  if (items) {
-    items.forEach((el) => {
-      if (!el) {
-        return;
-      }
-      result.items.push(el);
-    });
-  }
+// const scrapeMainPage = async (page, result) => {
+//   const cellSelector = 'div.store-section-items__cell';
+//   try {
+//     await page.waitForSelector(cellSelector);
+//   } catch (err) {
+//     console.log('Can\'t find element');
+//   }
+//   const items = await scrapeGrid(page, cellSelector);
+//   if (items) {
+//     items.forEach((el) => {
+//       if (!el) {
+//         return;
+//       }
+//       result.items.push(el);
+//     });
+//   }
 
-  await page.screenshot({path: './mainpage.png'});
-};
+//   await page.screenshot({ path: './mainpage.png' });
+// };
 
 const scrapeAll = async (browser, mainUrl) => {
   const page = await browser.newPage();
@@ -246,147 +274,187 @@ const scrapeAll = async (browser, mainUrl) => {
     items: [],
   };
 
+  console.log('Trying to find \'Confirm\' button...');
+  console.log('Wait for the language dialogue');
+  try {
+    await page.waitForSelector('xpath///div[@aria-label = \'Close\']');
+  } catch (err) {
+    console.log(`Can\'t find language dialogue. Error: ${err}`);
+    return result;
+  }
+  const buttonSelector = '//span[contains(text(), \'Confirm\')]';
+  const button = await page.waitForSelector(`xpath/${buttonSelector}`);
+  if (button) {
+    console.log('\'Confirm\' button found.');
+    await button.click();
+  }
+
+  await setTimeout(1000);
+
   console.log('Scraping main page sections contents...');
   console.log('Wait for the required DOM to be rendered');
   try {
-    await page.waitForSelector('div.store-section-item');
+    await page.waitForSelector('xpath///main[@id=\'mdc-main-content\']');
   } catch (err) {
     console.log('Can\'t find element');
     return result;
   }
 
-  const sectionsCount = await page.$$eval(SECTION_HTML_ELEMENT, (items) => items.length);
+  console.log('Wait for the first link to section');
+  await page.waitForSelector('xpath///div[contains(@class,' +
+  '\'MDCAppStoreStoreSectionItemByline/store-section-item-byline--price\')]');
+
+  console.log('Start scrolling...');
+  await page.evaluate(async () => {
+    let scrollCount = 10;
+
+    while (scrollCount-- > 0) {
+      window.scrollBy(0, 300);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 500);
+      });
+    }
+  });
+  console.log('Finish scrolling.');
+
+  const hrefs = await page.$$eval('a', (as) => as.map((a) => a.href)
+      .filter((href) => href.includes('section')));
+  const uniqueHrefs = [...new Set(hrefs)];
+  console.log(`hrefs ${uniqueHrefs}`);
+
+  const sectionsCount = uniqueHrefs.length;
   console.log(`Sections count: ${sectionsCount}`);
-  for (let index = 1; index < sectionsCount; index++) {
-    await processSection(page, {index: index}, result, true);
-  }
+  // for (let index = 0; index < sectionsCount; index++) {
+  //   await processSection(page, { url: uniqueHrefs[index] }, result, true);
+  // }
 
   console.log('Scraping favourite sections...');
+  await setTimeout(1000);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/2228099660560866/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/2228099660560866/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/2147175465364724/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/2147175465364724/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/1916327371799806/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/1916327371799806/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/377466989488910/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/377466989488910/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/594636347626579/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/594636347626579/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/989563394566732/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/989563394566732/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/323727091569600/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/323727091569600/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/328644544413671/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/328644544413671/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/728598080873692/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/728598080873692/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/549022969355907/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/549022969355907/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/305257336784520/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/305257336784520/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/2385850384822599/'}, result);
+      {url: 'https://www.meta.com/en-gb/experiences/section/2385850384822599/'}, result);
   await processSection(page,
-      {url: 'https://www.oculus.com/experiences/quest/section/336976240361150/'}, result, true);
+      {url: 'https://www.meta.com/en-gb/experiences/section/336976240361150/'}, result, true);
 
-  console.log('Scraping main page experiences & deals...');
-  try {
-    await scrapeMainPage(page, result);
-  } catch (err) {
-    console.log('Can\'t scrape main page: ' + err);
-  }
+  // console.log('Scraping main page experiences & deals...');
+  // try {
+  //   await scrapeMainPage(page, result);
+  // } catch (err) {
+  //   console.log('Can\'t scrape main page: ' + err);
+  // }
 
-  try {
-    console.log('Trying to find deals in the top carousel...');
-    console.log('Wait for the required DOM to be rendered');
-    try {
-      await page.waitForSelector('span.store-section-item-price-label__promo',
-          {timeout: 40000});
-    } catch (err) {
-      console.log('Can\'t find element');
-      return result;
-    }
-    console.log('Found needed element');
+  // try {
+  //   console.log('Trying to find deals in the top carousel...');
+  //   console.log('Wait for the required DOM to be rendered');
+  //   try {
+  //     await page.waitForSelector('span.store-section-item-price-label__promo',
+  //       { timeout: 40000 });
+  //   } catch (err) {
+  //     console.log('Can\'t find element');
+  //     return result;
+  //   }
+  //   console.log('Found needed element');
 
-    const selector = '.store-section-item-tag.store-section-item-tag__blue.' +
-      'store-section-item-price-label__promo';
-    const link = await page.$$eval(selector, (items) => {
-      const parentNode = items[0].parentNode.parentNode.parentNode.parentNode;
-      const link = parentNode.parentNode.parentNode.parentNode.href;
+  //   const selector = '.store-section-item-tag.store-section-item-tag__blue.' +
+  //     'store-section-item-price-label__promo';
+  //   const link = await page.$$eval(selector, (items) => {
+  //     const parentNode = items[0].parentNode.parentNode.parentNode.parentNode;
+  //     const link = parentNode.parentNode.parentNode.parentNode.href;
 
-      return link;
-    });
+  //     return link;
+  //   });
 
-    if (link == undefined || link.length == 0) {
-      console.log('Can\'t find game\'s link');
-      return result;
-    }
+  //   if (link == undefined || link.length == 0) {
+  //     console.log('Can\'t find game\'s link');
+  //     return result;
+  //   }
 
-    console.log(`Navigating to ${link}...`);
-    await page.goto(link);
+  //   console.log(`Navigating to ${link}...`);
+  //   await page.goto(link);
 
-    console.log('Wait for the required DOM to be rendered');
-    await page.waitForSelector('div.app-description__title');
-    console.log('Found needed element');
+  //   console.log('Wait for the required DOM to be rendered');
+  //   await page.waitForSelector('div.app-description__title');
+  //   console.log('Found needed element');
 
-    const game = await page.$$eval('div.app__row', (items) => {
-      const parsePrice = (str) => {
-        const priceArray = /^(.*)\$(.*)/g.exec(str);
-        console.log(`priceArray ${priceArray}`);
-        const priceCurrency = `${priceArray[1]}$`;
-        const priceValue = +priceArray[2];
-        console.log(`priceCurrency ${priceCurrency}`);
-        console.log(`priceValue ${priceValue}`);
-        const obj = {};
-        obj['currency'] = priceCurrency;
-        obj['value'] = priceValue;
-        return obj;
-      };
+  //   const game = await page.$$eval('div.app__row', (items) => {
+  //     const parsePrice = (str) => {
+  //       const priceArray = /^(.*)\$(.*)/g.exec(str);
+  //       console.log(`priceArray ${priceArray}`);
+  //       const priceCurrency = `${priceArray[1]}$`;
+  //       const priceValue = +priceArray[2];
+  //       console.log(`priceCurrency ${priceCurrency}`);
+  //       console.log(`priceValue ${priceValue}`);
+  //       const obj = {};
+  //       obj['currency'] = priceCurrency;
+  //       obj['value'] = priceValue;
+  //       return obj;
+  //     };
 
-      console.log('Found game block');
-      const game = {};
-      const item = items[0];
-      console.log('Looking for title');
-      game['name'] = item.querySelector('.app-description__title').innerText;
+  //     console.log('Found game block');
+  //     const game = {};
+  //     const item = items[0];
+  //     console.log('Looking for title');
+  //     game['name'] = item.querySelector('.app-description__title').innerText;
 
-      const discountSelector = '.app-purchase-price-discount-detail__promo-benefit';
-      const discountString = item.querySelectorAll(discountSelector)[0].innerText;
-      console.log(`dicsountString ${discountString}`);
-      const discountValue = /^-(.*)%$/g.exec(discountString)[1];
-      game['discountPercent'] = +discountValue;
+  //     const discountSelector = '.app-purchase-price-discount-detail__promo-benefit';
+  //     const discountString = item.querySelectorAll(discountSelector)[0].innerText;
+  //     console.log(`dicsountString ${discountString}`);
+  //     const discountValue = /^-(.*)%$/g.exec(discountString)[1];
+  //     game['discountPercent'] = +discountValue;
 
-      const salePrice = item.querySelector('span.app-purchase-price > span').innerText;
-      const salePriceObj = parsePrice(salePrice);
-      console.log(`salePriceObj ${salePriceObj}`);
-      game['salePrice'] = salePriceObj.value;
-      game['salePriceCurrency'] = salePriceObj.currency;
+  //     const salePrice = item.querySelector('span.app-purchase-price > span').innerText;
+  //     const salePriceObj = parsePrice(salePrice);
+  //     console.log(`salePriceObj ${salePriceObj}`);
+  //     game['salePrice'] = salePriceObj.value;
+  //     game['salePriceCurrency'] = salePriceObj.currency;
 
-      const priceSelector = '.app-purchase-price-discount-detail__strikethrough-price > span';
-      const price = item.querySelector(priceSelector).innerText;
-      const priceObj = parsePrice(price);
-      console.log(`priceObj ${priceObj}`);
-      game['price'] = priceObj.value;
-      game['priceCurrency'] = priceObj.currency;
+  //     const priceSelector = '.app-purchase-price-discount-detail__strikethrough-price > span';
+  //     const price = item.querySelector(priceSelector).innerText;
+  //     const priceObj = parsePrice(price);
+  //     console.log(`priceObj ${priceObj}`);
+  //     game['price'] = priceObj.value;
+  //     game['priceCurrency'] = priceObj.currency;
 
-      const now = Date.now();
-      const timer = item.querySelector('.store-item-countdown-timer__timer').innerText;
-      console.log(`timer ${timer}`);
-      const timeSplitted = timer.split(':');
-      const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
-                Number(timeSplitted[2])) * 1000;
-      console.log(`endsInMs ${endsInMs}`);
-      const endsUtcDate = new Date(now + endsInMs);
-      console.log(`endsUtcDate ${endsUtcDate}`);
-      game['endsUtc'] = endsUtcDate.toISOString();
+  //     const now = Date.now();
+  //     const timer = item.querySelector('.store-item-countdown-timer__timer').innerText;
+  //     console.log(`timer ${timer}`);
+  //     const timeSplitted = timer.split(':');
+  //     const endsInMs = (Number(timeSplitted[0]) * 60 * 60 + Number(timeSplitted[1]) * 60 +
+  //       Number(timeSplitted[2])) * 1000;
+  //     console.log(`endsInMs ${endsInMs}`);
+  //     const endsUtcDate = new Date(now + endsInMs);
+  //     console.log(`endsUtcDate ${endsUtcDate}`);
+  //     game['endsUtc'] = endsUtcDate.toISOString();
 
-      return game;
-    });
-    game['url'] = link;
+  //     return game;
+  //   });
+  //   game['url'] = link;
 
-    result.items.push(game);
-  } catch (e) {
-    console.log(`Can\'t find game in the carousel: ${e}`);
-  }
+  //   result.items.push(game);
+  // } catch (e) {
+  //   console.log(`Can\'t find game in the carousel: ${e}`);
+  // }
 
   return result;
 };
